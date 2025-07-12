@@ -120,3 +120,14 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Force mobile sidebar to be black */
+@media (max-width: 768px) {
+  [data-mobile="true"][data-sidebar="sidebar"] {
+    background-color: #000000 !important;
+  }
+  
+  [data-mobile="true"] .bg-sidebar {
+    background-color: #000000 !important;
+  }
+}
