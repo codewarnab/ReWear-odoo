@@ -56,7 +56,7 @@ export function SigninCard() {
           toast.success("Account created successfully!", {
             description: "Welcome to the platform.",
           });
-          router.push("/home");
+          router.push("/dashboard");
         } else {
           toast.error("Signup failed", {
             description: "Email might already be in use or invalid.",
@@ -68,7 +68,7 @@ export function SigninCard() {
           toast.success("Welcome back!", {
             description: "You have been signed in successfully.",
           });
-          router.push("/home");
+          router.push("/dashboard");
         } else {
           toast.error("Login failed", {
             description: "Please check your credentials.",
@@ -153,7 +153,7 @@ export function SigninCard() {
         toast.success("Welcome!", {
           description: "Successfully signed in with OTP.",
         });
-        router.push("/home");
+        router.push("/dashboard");
       } else {
         toast.error("Verification failed", {
           description: "Invalid OTP code. Please try again.",

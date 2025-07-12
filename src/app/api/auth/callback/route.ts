@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
   //})
 
   const supabase = await createserverClient()
-  const next = '/home'
+  const next = '/dashboard'
 
   // Create redirect link without the secret parameters
   const redirectTo = new URL(next, request.url)

@@ -54,12 +54,12 @@ export async function updateSession(request: NextRequest) {
 
   if (user &&
     !profileComplete &&
-    !request.nextUrl.pathname.startsWith('/home') &&
+    !request.nextUrl.pathname.startsWith('/dashboard') &&
     !request.nextUrl.pathname.startsWith('/api/complete-home')
   ) {
     console.log('⚠️ Middleware - Profile incomplete, redirecting to home')
     const url = request.nextUrl.clone()
-    url.pathname = '/home'
+    url.pathname = '/dashboard'
     return NextResponse.redirect(url)
   }
 
