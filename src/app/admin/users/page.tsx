@@ -89,7 +89,7 @@ export default function UsersPage() {
   };
 
   return (
-    <div className="flex-1 space-y-6 overflow-auto">
+    <div className="flex-1 p-6 space-y-6 bg-white overflow-auto">
       <div className="space-y-2">
         <h1 className="text-3xl font-bold tracking-tight">Manage Users</h1>
         <p className="text-muted-foreground">

@@ -49,8 +49,8 @@ export default function AdminLayout({
         {/* Main content area with rounded top-left corner */}
         <div className="relative h-[calc(100svh-4rem)] bg-[#171717] overflow-hidden">
           {/* Rounded overlay that creates the merge effect */}
-          <div className="absolute inset-0 bg-white rounded-tl-[2rem] md:rounded-tl-[3rem] transition-all ease-in-out duration-300 md:group-peer-data-[state=collapsed]/sidebar-inset:rounded-tl-none">
-            <div className="h-full w-full p-4">
+          <div className="absolute inset-0 bg-white rounded-tl-[2rem] md:rounded-tl-[3rem] transition-all ease-in-out duration-300 md:group-peer-data-[state=collapsed]/sidebar-inset:rounded-tl-none overflow-auto">
+            <div className="h-full w-full p-4 min-h-full">
               {children}
             </div>
           </div>
