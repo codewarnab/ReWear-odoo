@@ -10,7 +10,7 @@ import { Separator } from "@/components/ui/separator"
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 import { RefreshCw, ArrowLeft, Check, X } from "lucide-react"
 import { LocationPicker } from "@/components/ui/location-picker"
-import { useUserProfile, useSession } from "@/contexts/SessionContext"
+import { useUserProfile } from "@/hooks/use-user-profile"
 import { toast } from "sonner"
 
 interface EditProfileFormProps {
@@ -18,8 +18,7 @@ interface EditProfileFormProps {
 }
 
 export default function EditProfileForm({ apiKey }: EditProfileFormProps) {
-  const userProfile = useUserProfile()
-  const { isProfileLoading } = useSession()
+  const { userProfile, isLoading: isProfileLoading } = useUserProfile()
   const [fullName, setFullName] = useState("")
   const [username, setUsername] = useState("")
   const [bio, setBio] = useState("")

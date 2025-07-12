@@ -1,15 +1,17 @@
 'use client';
 
+import { use } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft, Construction } from "lucide-react";
 
 interface ManageItemPageProps {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
 export default function ManageItemPage({ params }: ManageItemPageProps) {
+  const { id } = use(params);
   const router = useRouter();
 
   return (

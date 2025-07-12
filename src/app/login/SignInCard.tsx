@@ -9,7 +9,6 @@ import { Card } from "@/components/ui/card";
 import {
   loginWithEmailPassword,
   signupWithEmailPassword,
-  loginWithProvider,
   sendOTP,
   verifyOTP,
 } from "./SignInCardUtils";
@@ -31,7 +30,7 @@ type FormData = z.infer<typeof authSchema>;
 export function SigninCard() {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [authMethod, setAuthMethod] = useState<string>("otp");
-  const [isSignUpMode, setIsSignUpMode] = useState(false);
+  const [isSignUpMode, setIsSignUpMode] = useState(true);
   const [showOTPVerification, setShowOTPVerification] = useState(false);
   const [otpEmail, setOtpEmail] = useState("");
   const [otp, setOtp] = useState("");
@@ -80,29 +79,6 @@ export function SigninCard() {
         description: "An unexpected error occurred. Please try again.",
       });
       console.error(`${isSignUpMode ? 'Signup' : 'Signin'} error:`, error);
-    } finally {
-      setIsLoading(false);
-    }
-  }
-
-  async function handleSocialLogin(provider: "google" | "github") {
-    setIsLoading(true);
-    try {
-      const result = await loginWithProvider(provider);
-      if (result) {
-        toast.success("Welcome!", {
-          description: `Successfully signed in with ${provider}.`,
-        });
-      } else {
-        toast.error("Authentication failed", {
-          description: `Could not sign in with ${provider}. Please try again.`,
-        });
-      }
-    } catch (error) {
-      toast.error("Authentication error", {
-        description: `Failed to sign in with ${provider}.`,
-      });
-      console.error(`${provider} login error:`, error);
     } finally {
       setIsLoading(false);
     }
@@ -230,7 +206,6 @@ export function SigninCard() {
               onAuthMethodChange={setAuthMethod}
               onSubmit={onSubmit}
               onToggleMode={toggleMode}
-              onSocialLogin={handleSocialLogin}
               onSendOTP={handleSendOTP}
             />
           </Card>

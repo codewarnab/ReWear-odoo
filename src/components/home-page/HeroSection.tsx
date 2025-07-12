@@ -4,11 +4,13 @@ import { Recycle, Users, ShoppingBag } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import CustomButton from "./CustomButton";
-import { useSession } from "@/contexts/SessionContext";
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { useAuth } from "@/hooks/use-auth";
+import { useUserProfile } from "@/hooks/use-user-profile";
+import UserDropdown from "@/components/user-dropdown";
 
 export default function HeroSection() {
-  const { isAuthenticated, userProfile } = useSession();
+  const { isAuthenticated } = useAuth();
+  const { userProfile } = useUserProfile();
 
   // Get user initials for avatar fallback
   const getUserInitials = (fullName: string | null | undefined): string => {
@@ -53,20 +55,7 @@ export default function HeroSection() {
             </nav>
             <div className="flex items-center">
               {isAuthenticated && userProfile ? (
-                <Link href="/profile" className="flex items-center space-x-2 hover:opacity-80 transition-opacity">
-                  <Avatar className="h-8 w-8">
-                    <AvatarImage 
-                      src={userProfile.avatar_url || ""} 
-                      alt={userProfile.full_name || "User avatar"}
-                    />
-                    <AvatarFallback className="bg-gray-700 text-white text-sm font-medium">
-                      {getUserInitials(userProfile.full_name)}
-                    </AvatarFallback>
-                  </Avatar>
-                  <span className="hidden sm:block text-sm font-medium text-gray-700">
-                    {userProfile.full_name || userProfile.username}
-                  </span>
-                </Link>
+                <UserDropdown />
               ) : (
                 <Link href="/login">
                   <div className="px-4 py-2 bg-black text-white rounded-full hover:bg-gray-800 transition-colors text-sm font-medium">

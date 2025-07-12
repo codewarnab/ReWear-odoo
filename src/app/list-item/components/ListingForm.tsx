@@ -18,7 +18,8 @@ import {
 } from "@/lib/validations/listing";
 import { containerVariants } from "@/lib/animations";
 import { toast } from "sonner";
-import { useSession } from "@/contexts/SessionContext";
+import { useAuth } from "@/hooks/use-auth";
+import { useUserProfile } from "@/hooks/use-user-profile";
 import { createClothingItem, CreateClothingItemInput } from "@/lib/supabase/clothingItems";
 
 // Import the new components
@@ -37,7 +38,8 @@ interface ListingFormProps {
 
 export default function ListingForm({ onSubmit, isLoading: externalLoading = false }: ListingFormProps) {
     const router = useRouter();
-    const { user, userProfile, isLoading: sessionLoading, isAuthenticated, error: sessionError } = useSession();
+    const { user, isLoading: authLoading, isAuthenticated, error: authError } = useAuth();
+    const { userProfile } = useUserProfile();
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [loadingTimeout, setLoadingTimeout] = useState(false);
 
@@ -56,9 +58,9 @@ export default function ListingForm({ onSubmit, isLoading: externalLoading = fal
     useEffect(() => {
         let timeoutId: NodeJS.Timeout;
         
-        if (sessionLoading) {
+        if (authLoading) {
             timeoutId = setTimeout(() => {
-                console.log('⏰ Session loading taking too long, showing timeout message');
+                console.log('⏰ Auth loading taking too long, showing timeout message');
                 setLoadingTimeout(true);
             }, 8000); // 8 second timeout
         } else {
@@ -68,12 +70,12 @@ export default function ListingForm({ onSubmit, isLoading: externalLoading = fal
         return () => {
             if (timeoutId) clearTimeout(timeoutId);
         };
-    }, [sessionLoading]);
+    }, [authLoading]);
 
     // Check if user is authenticated
     useEffect(() => {
-        console.log('Auth check:', { sessionLoading, isAuthenticated, user: !!user, sessionError });
-        if (!sessionLoading && !isAuthenticated && !sessionError) {
+        console.log('Auth check:', { authLoading, isAuthenticated, user: !!user, authError });
+        if (!authLoading && !isAuthenticated && !authError) {
             console.log('User not authenticated, redirecting to login');
             toast.error("Authentication required", {
                 description: "Please sign in to list an item.",
@@ -81,7 +83,7 @@ export default function ListingForm({ onSubmit, isLoading: externalLoading = fal
             });
             router.push("/login");
         }
-    }, [sessionLoading, isAuthenticated, router, user, sessionError]);
+    }, [authLoading, isAuthenticated, router, user, authError]);
 
     // Watch for category changes and clear size field
     const selectedCategory = form.watch("category");
@@ -201,11 +203,11 @@ export default function ListingForm({ onSubmit, isLoading: externalLoading = fal
         router.back();
     };
 
-    // Show loading state while session is loading
-    console.log('Render check - sessionLoading:', sessionLoading, 'isAuthenticated:', isAuthenticated, 'sessionError:', sessionError);
+    // Show loading state while auth is loading
+    console.log('Render check - authLoading:', authLoading, 'isAuthenticated:', isAuthenticated, 'authError:', authError);
     
-    if (sessionLoading || loadingTimeout) {
-        console.log('Showing loading state because sessionLoading is true or timeout occurred');
+    if (authLoading || loadingTimeout) {
+        console.log('Showing loading state because authLoading is true or timeout occurred');
         return (
             <div className="max-w-6xl mx-auto">
                 <Card className="shadow-lg">
@@ -240,9 +242,9 @@ export default function ListingForm({ onSubmit, isLoading: externalLoading = fal
         );
     }
 
-    // Show error state if session failed to load
-    if (sessionError) {
-        console.log('Showing error state because sessionError:', sessionError);
+    // Show error state if auth failed to load
+    if (authError) {
+        console.log('Showing error state because authError:', authError);
         return (
             <div className="max-w-6xl mx-auto">
                 <Card className="shadow-lg">
@@ -251,7 +253,7 @@ export default function ListingForm({ onSubmit, isLoading: externalLoading = fal
                             <div className="text-center">
                                 <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
                                 <h3 className="text-lg font-semibold text-gray-900 mb-2">Authentication Error</h3>
-                                <p className="text-gray-600 mb-4">{sessionError}</p>
+                                <p className="text-gray-600 mb-4">{authError}</p>
                                 <button
                                     onClick={() => window.location.reload()}
                                     className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"

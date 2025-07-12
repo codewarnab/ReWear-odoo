@@ -4,13 +4,12 @@ import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { useUserProfile, useSession } from "@/contexts/SessionContext";
+import { useUserProfile } from "@/hooks/use-user-profile";
 import { coordinatesToAddressSafe, Coordinates } from "@/lib/utils";
 import { useState, useEffect } from "react";
 
 export default function ProfileSection() {
-  const userProfile = useUserProfile();
-  const { isProfileLoading } = useSession();
+  const { userProfile, isLoading: isProfileLoading } = useUserProfile();
   const [locationAddress, setLocationAddress] = useState<string>("");
 
   // Convert location coordinates to address

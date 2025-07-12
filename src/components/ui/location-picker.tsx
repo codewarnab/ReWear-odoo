@@ -6,7 +6,7 @@ import {
     Marker,
 } from "@vis.gl/react-google-maps";
 import { MapPinnedIcon, Navigation, Loader2 } from "lucide-react";
-import { useCallback, useState, useEffect, type ComponentProps } from "react";
+import { useCallback, useState, useEffect, useRef, type ComponentProps } from "react";
 import { useMediaQuery } from "usehooks-ts";
 import { cn } from "@/lib/utils";
 import { coordinatesToAddress } from "@/lib/utils";
@@ -68,6 +68,15 @@ export function LocationPicker({
     // Address state
     const [address, setAddress] = useState<string>("");
     const [isLoadingAddress, setIsLoadingAddress] = useState(false);
+    
+    // Store the onValueChange callback in a ref to avoid dependency issues
+    const onValueChangeRef = useRef(onValueChange);
+    const lastReportedAddressRef = useRef<string | undefined>(undefined);
+    
+    // Update ref when onValueChange changes
+    useEffect(() => {
+        onValueChangeRef.current = onValueChange;
+    }, [onValueChange]);
 
     // Detect system dark mode preference
     const systemPrefersDark = useMediaQuery("(prefers-color-scheme: dark)");
@@ -109,7 +118,11 @@ export function LocationPicker({
     // Fetch address when coordinates change
     useEffect(() => {
         const fetchAddress = async () => {
-            if (!actualValue || !apiKey) return;
+            if (!actualValue || !apiKey) {
+                // Clear the last reported address when there's no value
+                lastReportedAddressRef.current = undefined;
+                return;
+            }
             
             setIsLoadingAddress(true);
             try {
@@ -118,9 +131,22 @@ export function LocationPicker({
                     apiKey
                 );
                 setAddress(fetchedAddress);
+                
+                // Only notify parent if the address has changed
+                if (lastReportedAddressRef.current !== fetchedAddress) {
+                    lastReportedAddressRef.current = fetchedAddress;
+                    onValueChangeRef.current?.(actualValue, fetchedAddress);
+                }
             } catch (error) {
                 console.error("Error fetching address:", error);
-                setAddress(`${actualValue.lat.toFixed(4)}, ${actualValue.lng.toFixed(4)}`);
+                const fallbackAddress = `${actualValue.lat.toFixed(4)}, ${actualValue.lng.toFixed(4)}`;
+                setAddress(fallbackAddress);
+                
+                // Only notify parent if the address has changed
+                if (lastReportedAddressRef.current !== fallbackAddress) {
+                    lastReportedAddressRef.current = fallbackAddress;
+                    onValueChangeRef.current?.(actualValue, fallbackAddress);
+                }
             } finally {
                 setIsLoadingAddress(false);
             }
@@ -138,18 +164,14 @@ export function LocationPicker({
                 setInternalValue(newValue);
             }
 
-            // We'll pass the address in the effect below, for now just pass coordinates
-            onValueChange?.(newValue, undefined);
+            // Reset the last reported address when coordinates change
+            lastReportedAddressRef.current = undefined;
+            
+            // Call onValueChange immediately with coordinates (address will be updated by effect)
+            onValueChangeRef.current?.(newValue, undefined);
         },
-        [isControlled, onValueChange]
+        [isControlled]
     );
-
-    // Notify parent when address changes
-    useEffect(() => {
-        if (actualValue && address) {
-            onValueChange?.(actualValue, address);
-        }
-    }, [actualValue, address, onValueChange]);
 
     // Function to get user's current location
     const getCurrentLocation = useCallback(async () => {

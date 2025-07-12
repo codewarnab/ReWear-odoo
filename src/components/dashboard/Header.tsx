@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import Image from "next/image";
+import UserDropdown from "@/components/user-dropdown";
 
 export default function Header() {
   return (
@@ -37,7 +38,7 @@ export default function Header() {
             </Link>
           </nav>
           <div className="flex items-center">
-            <div className="w-8 h-8 bg-gray-300 rounded-full"></div>
+            <UserDropdown />
           </div>
         </div>
       </div>

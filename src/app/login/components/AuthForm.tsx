@@ -9,7 +9,6 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { UseFormReturn } from "react-hook-form";
 import { EmailPasswordForm } from "./EmailPasswordForm";
-import { SocialLoginForm } from "./SocialLoginForm";
 import { OTPRequestForm } from "./OTPRequestForm";
 
 interface AuthFormProps {
@@ -19,7 +18,6 @@ interface AuthFormProps {
   onAuthMethodChange: (method: string) => void;
   onSubmit: (values: { email: string; password: string }) => void;
   onToggleMode: () => void;
-  onSocialLogin: (provider: "google" | "github") => void;
   onSendOTP: () => void;
 }
 
@@ -30,7 +28,6 @@ export function AuthForm({
   onAuthMethodChange,
   onSubmit,
   onToggleMode,
-  onSocialLogin,
   onSendOTP,
 }: AuthFormProps) {
   return (
@@ -48,9 +45,8 @@ export function AuthForm({
       </CardHeader>
       <CardContent>
         <Tabs defaultValue="email" onValueChange={onAuthMethodChange}>
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="email">Email</TabsTrigger>
-            <TabsTrigger value="social">Social</TabsTrigger>
             <TabsTrigger value="otp">OTP</TabsTrigger>
           </TabsList>
 
@@ -61,13 +57,6 @@ export function AuthForm({
               isLoading={isLoading}
               isSignUpMode={isSignUpMode}
               onToggleMode={onToggleMode}
-            />
-          </TabsContent>
-
-          <TabsContent value="social">
-            <SocialLoginForm
-              onSocialLogin={onSocialLogin}
-              isLoading={isLoading}
             />
           </TabsContent>
 

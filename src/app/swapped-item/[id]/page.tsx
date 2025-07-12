@@ -1,5 +1,6 @@
 'use client';
 
+import { use } from 'react';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from "@/components/ui/button";
@@ -12,7 +13,7 @@ import {
 import { ArrowLeft, MessageCircle, RotateCcw } from "lucide-react";
 
 interface SwappedItemPageProps {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
 // Mock data for swapped item details
@@ -68,8 +69,9 @@ const mockSwappedItemDetails = {
 };
 
 export default function SwappedItemPage({ params }: SwappedItemPageProps) {
+  const { id } = use(params);
   const router = useRouter();
-  const [item] = useState<DetailedItem | undefined>(getDetailedItemById(params.id));
+  const [item] = useState<DetailedItem | undefined>(getDetailedItemById(id));
   const [swapDetails] = useState(mockSwappedItemDetails);
 
   if (!item) {
