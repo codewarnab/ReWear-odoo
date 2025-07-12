@@ -1,10 +1,10 @@
-import { Recycle, Users, ShoppingBag, Shirt, Crown, Baby, Briefcase, Home, Dumbbell, Sparkles, Heart } from "lucide-react";
+import { Recycle, Users, ShoppingBag } from "lucide-react";
 import Image from "next/image";
 import CustomButton from "./CustomButton";
 
 export default function HeroSection() {
   return (
-    <section className="min-h-screen flex items-center justify-center relative overflow-hidden bg-white font-sans pt-24">
+    <section className="min-h-screen flex items-center justify-center relative overflow-hidden bg-white font-sans pt-32">
       {/* Logo */}
       <div className="absolute top-8 left-8 z-30">
         <Image
