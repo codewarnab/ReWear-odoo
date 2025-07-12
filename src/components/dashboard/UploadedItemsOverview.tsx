@@ -108,7 +108,7 @@ export default function UploadedItemsOverview({ uploadedItems }: UploadedItemsOv
     <Card className="mb-8">
       <CardHeader>
         <div className="flex items-center justify-between">
-          <CardTitle>Uploaded Items Overview</CardTitle>
+          <CardTitle className="text-2xl font-bold text-gray-900">Items You've Listed</CardTitle>
           <div className="flex items-center gap-2">
             <motion.div {...buttonHoverProps}>
               <Button

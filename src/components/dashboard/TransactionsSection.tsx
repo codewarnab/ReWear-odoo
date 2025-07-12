@@ -182,7 +182,7 @@ export default function TransactionsSection({ transactions }: TransactionsSectio
     <Card>
       <CardHeader>
         <div className="flex items-center justify-between">
-          <CardTitle>Transactions</CardTitle>
+          <CardTitle className="text-2xl font-bold text-gray-900">Transactions</CardTitle>
           <div className="flex items-center gap-2">
             <motion.div {...buttonHoverProps}>
               <Button

@@ -1,5 +1,5 @@
 "use client";
-
+import { Toaster } from "@/components/ui/sonner";
 import { AppSidebar } from "@/components/app-sidebar";
 import UserDropdown from "@/components/user-dropdown";
 import {
@@ -45,7 +45,7 @@ export default function AdminLayout({
             <UserDropdown />
           </div>
         </header>
-        
+
         {/* Main content area with rounded top-left corner */}
         <div className="relative h-[calc(100svh-4rem)] bg-[#171717] overflow-hidden">
           {/* Rounded overlay that creates the merge effect */}
@@ -56,6 +56,7 @@ export default function AdminLayout({
           </div>
         </div>
       </SidebarInset>
+      <Toaster richColors />
     </SidebarProvider>
   );
 }
