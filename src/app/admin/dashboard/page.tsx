@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -11,65 +12,189 @@ import {
 } from "@/components/ui/table";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { createClient } from "@/lib/supabase/client";
+import { Tables } from "@/types/supabase";
 
-// Mock data for pending listings
-const pendingItems = [
-  {
-    id: 1,
-    title: "Vintage Denim Jacket",
-    uploader: "Alex Doe",
-    date: "2023-10-27",
-    image: "👔",
-    category: "Outerwear",
-    price: "$45",
-  },
-  {
-    id: 2,
-    title: "Floral Summer Dress",
-    uploader: "Jane Smith",
-    date: "2023-10-26",
-    image: "👗",
-    category: "Dresses",
-    price: "$32",
-  },
-  {
-    id: 3,
-    title: "Classic White Sneakers",
-    uploader: "Sam Wilson",
-    date: "2023-10-26",
-    image: "👟",
-    category: "Footwear",
-    price: "$28",
-  },
-  {
-    id: 4,
-    title: "Leather Crossbody Bag",
-    uploader: "Emily Carter",
-    date: "2023-10-25",
-    image: "👜",
-    category: "Accessories",
-    price: "$65",
-  },
-  {
-    id: 5,
-    title: "Wool Winter Coat",
-    uploader: "Michael Brown",
-    date: "2023-10-24",
-    image: "🧥",
-    category: "Outerwear",
-    price: "$85",
-  },
-];
+type PendingItemWithDetails = Tables<'clothing_items'> & {
+  users_profiles: Tables<'users_profiles'> | null;
+  categories: Tables<'categories'> | null;
+};
 
 export default function ModerationPage() {
-  const handleApprove = (itemId: number) => {
-    console.log(`Approved item ${itemId}`);
-    // Add actual approval logic here
+  const [pendingItems, setPendingItems] = useState<PendingItemWithDetails[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState({
+    pending: 0,
+    approvedToday: 0,
+    rejectedToday: 0
+  });
+
+  const supabase = createClient();
+
+  useEffect(() => {
+    fetchPendingItems();
+    fetchStats();
+  }, []);
+
+  const fetchPendingItems = async () => {
+    try {
+      setLoading(true);
+      
+      const { data, error } = await supabase
+        .from('clothing_items')
+        .select(`
+          *,
+          users_profiles:owner_id (*),
+          categories:category_id (*)
+        `)
+        .eq('approval_status', 'pending')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching pending items:', error);
+        return;
+      }
+
+      setPendingItems(data || []);
+    } catch (error) {
+      console.error('Error:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleRemove = (itemId: number) => {
-    console.log(`Removed item ${itemId}`);
-    // Add actual removal logic here
+  const fetchStats = async () => {
+    try {
+      // Get pending count
+      const { data: pendingData, error: pendingError } = await supabase
+        .from('clothing_items')
+        .select('id')
+        .eq('approval_status', 'pending');
+
+      if (pendingError) {
+        console.error('Error fetching pending stats:', pendingError);
+        return;
+      }
+
+      // Get approved today count
+      const today = new Date().toISOString().split('T')[0];
+      const { data: approvedData, error: approvedError } = await supabase
+        .from('clothing_items')
+        .select('id')
+        .eq('approval_status', 'approved')
+        .gte('approval_date', `${today}T00:00:00.000Z`)
+        .lte('approval_date', `${today}T23:59:59.999Z`);
+
+      if (approvedError) {
+        console.error('Error fetching approved stats:', approvedError);
+        return;
+      }
+
+      // Get rejected today count
+      const { data: rejectedData, error: rejectedError } = await supabase
+        .from('clothing_items')
+        .select('id')
+        .eq('approval_status', 'rejected')
+        .gte('updated_at', `${today}T00:00:00.000Z`)
+        .lte('updated_at', `${today}T23:59:59.999Z`);
+
+      if (rejectedError) {
+        console.error('Error fetching rejected stats:', rejectedError);
+        return;
+      }
+
+      setStats({
+        pending: pendingData?.length || 0,
+        approvedToday: approvedData?.length || 0,
+        rejectedToday: rejectedData?.length || 0
+      });
+    } catch (error) {
+      console.error('Error fetching stats:', error);
+    }
+  };
+
+  const handleApprove = async (itemId: string) => {
+    try {
+      // First, let's try with just the approval status and see what works
+      const { error } = await supabase
+        .from('clothing_items')
+        .update({
+          approval_status: 'approved',
+          approval_date: new Date().toISOString(),
+          listed_at: new Date().toISOString(),
+          // Keep the current status unchanged for now
+          // You might want to set approved_by to the current admin user ID
+          // approved_by: currentAdminId
+        })
+        .eq('id', itemId);
+
+      if (error) {
+        console.error('Error approving item:', error);
+        return;
+      }
+
+      // Refresh data
+      await fetchPendingItems();
+      await fetchStats();
+    } catch (error) {
+      console.error('Error:', error);
+    }
+  };
+
+  const handleReject = async (itemId: string) => {
+    try {
+      const { error } = await supabase
+        .from('clothing_items')
+        .update({
+          approval_status: 'rejected',
+          rejection_reason: 'Item does not meet platform guidelines',
+          updated_at: new Date().toISOString(),
+          // Keep the current status unchanged for now
+          // You might want to set approved_by to the current admin user ID
+          // approved_by: currentAdminId
+        })
+        .eq('id', itemId);
+
+      if (error) {
+        console.error('Error rejecting item:', error);
+        return;
+      }
+
+      // Refresh data
+      await fetchPendingItems();
+      await fetchStats();
+    } catch (error) {
+      console.error('Error:', error);
+    }
+  };
+
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return 'N/A';
+    return new Date(dateString).toLocaleDateString();
+  };
+
+  const getItemImage = (item: Tables<'clothing_items'>) => {
+    if (!item.images) return "📦";
+    
+    // Try to get the first image from the images array/JSON
+    try {
+      const images = Array.isArray(item.images) ? item.images : JSON.parse(item.images as string);
+      return images.length > 0 ? "🎽" : "📦"; // Default clothing icon
+    } catch {
+      return "📦";
+    }
+  };
+
+  const getExchangePreferenceDisplay = (preference: string | null) => {
+    switch (preference) {
+      case 'points':
+        return 'Points';
+      case 'swap':
+        return 'Swap';
+      default:
+        return 'N/A';
+    }
   };
 
   return (
@@ -88,7 +213,7 @@ export default function ModerationPage() {
             <CardTitle className="text-sm font-medium">Pending Items</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-orange-600">47</div>
+            <div className="text-2xl font-bold text-orange-600">{stats.pending}</div>
             <p className="text-xs text-muted-foreground">Awaiting review</p>
           </CardContent>
         </Card>
@@ -97,7 +222,7 @@ export default function ModerationPage() {
             <CardTitle className="text-sm font-medium">Approved Today</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">23</div>
+            <div className="text-2xl font-bold text-green-600">{stats.approvedToday}</div>
             <p className="text-xs text-muted-foreground">Items approved</p>
           </CardContent>
         </Card>
@@ -106,7 +231,7 @@ export default function ModerationPage() {
             <CardTitle className="text-sm font-medium">Rejected Today</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-600">5</div>
+            <div className="text-2xl font-bold text-red-600">{stats.rejectedToday}</div>
             <p className="text-xs text-muted-foreground">Items rejected</p>
           </CardContent>
         </Card>
@@ -119,60 +244,97 @@ export default function ModerationPage() {
           <CardDescription>Items waiting for approval</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Item</TableHead>
-                  <TableHead>Category</TableHead>
-                  <TableHead>Uploader</TableHead>
-                  <TableHead>Price</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {pendingItems.map((item) => (
-                  <TableRow key={item.id}>
-                    <TableCell>
-                      <div className="flex items-center space-x-3">
-                        <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center text-2xl">
-                          {item.image}
-                        </div>
-                        <div>
-                          <p className="font-medium">{item.title}</p>
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{item.category}</Badge>
-                    </TableCell>
-                    <TableCell>{item.uploader}</TableCell>
-                    <TableCell className="font-medium">{item.price}</TableCell>
-                    <TableCell>{item.date}</TableCell>
-                    <TableCell>
-                      <div className="flex gap-2">
-                        <Button
-                          size="sm"
-                          className="bg-green-600 hover:bg-green-700 text-white"
-                          onClick={() => handleApprove(item.id)}
-                        >
-                          Approve
-                        </Button>
-                        <Button
-                          size="sm"
-                          className="bg-red-600 hover:bg-red-700 text-white"
-                          onClick={() => handleRemove(item.id)}
-                        >
-                          Remove
-                        </Button>
-                      </div>
-                    </TableCell>
+          {loading ? (
+            <div className="flex items-center justify-center p-8">
+              <div className="text-muted-foreground">Loading pending items...</div>
+            </div>
+          ) : pendingItems.length === 0 ? (
+            <div className="flex items-center justify-center p-8">
+              <div className="text-muted-foreground">No pending items found</div>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Item</TableHead>
+                    <TableHead>Category</TableHead>
+                    <TableHead>Uploader</TableHead>
+                    <TableHead>Exchange Type</TableHead>
+                    <TableHead>Points Value</TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Actions</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+                </TableHeader>
+                <TableBody>
+                  {pendingItems.map((item) => (
+                    <TableRow key={item.id}>
+                      <TableCell>
+                        <div className="flex items-center space-x-3">
+                          <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center text-2xl">
+                            {getItemImage(item)}
+                          </div>
+                          <div>
+                            <p className="font-medium">{item.title}</p>
+                            <p className="text-sm text-gray-500 max-w-xs truncate">
+                              {item.description || 'No description'}
+                            </p>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline">
+                          {item.categories?.name || 'Uncategorized'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center space-x-2">
+                          <Avatar className="w-8 h-8">
+                            <AvatarImage src={item.users_profiles?.avatar_url || undefined} />
+                            <AvatarFallback>
+                              {item.users_profiles?.full_name?.charAt(0) || 
+                               item.users_profiles?.username?.charAt(0) || 'U'}
+                            </AvatarFallback>
+                          </Avatar>
+                          <span className="text-sm">
+                            {item.users_profiles?.full_name || 
+                             item.users_profiles?.username || 'Unknown User'}
+                          </span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={item.exchange_preference === 'points' ? 'default' : 'secondary'}>
+                          {getExchangePreferenceDisplay(item.exchange_preference)}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="font-medium">
+                        {item.points_value ? `${item.points_value} pts` : 'N/A'}
+                      </TableCell>
+                      <TableCell>{formatDate(item.created_at)}</TableCell>
+                      <TableCell>
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            className="bg-green-600 hover:bg-green-700 text-white"
+                            onClick={() => handleApprove(item.id)}
+                          >
+                            Approve
+                          </Button>
+                          <Button
+                            size="sm"
+                            className="bg-red-600 hover:bg-red-700 text-white"
+                            onClick={() => handleReject(item.id)}
+                          >
+                            Reject
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

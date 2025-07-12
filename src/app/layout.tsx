@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Manrope } from "next/font/google";
 import "./globals.css";
-import Navbar from "@/components/home-page/Navbar";
 import { SessionProvider } from "@/contexts/SessionContext";
 import { Toaster } from "@/components/ui/sonner";
 
@@ -26,8 +25,7 @@ export default function RootLayout({
         className={`${manrope.variable} font-sans antialiased`}
       >
         <SessionProvider>
-          <Navbar />
-          {children}
+            {children}
           <Toaster richColors />
         </SessionProvider>
       </body>
