@@ -34,36 +34,59 @@ export async function updateSession(request: NextRequest) {
   console.log('🔐 Middleware - User authentication check:', {
     hasUser: !!user,
     userId: user?.id,
-    pathname: request.nextUrl.pathname,
-    profileComplete: user?.app_metadata?.profile_complete
+    pathname: request.nextUrl.pathname
   })
 
   if (
     !user &&
-    !request.nextUrl.pathname.startsWith('/SignIn') &&
+    !request.nextUrl.pathname.startsWith('/login') &&
     !request.nextUrl.pathname.startsWith('/api/auth')
   ) {
-    console.log('🚫 Middleware - No user found, redirecting to SignIn')
+    console.log('🚫 Middleware - No user found, redirecting to Login')
     const url = request.nextUrl.clone()
-    url.pathname = '/SignIn'
+    url.pathname = '/login'
     return NextResponse.redirect(url)
   }
 
-  const profileComplete = user?.app_metadata?.profile_complete;
-  
+  // Check if user has a complete profile in the database
+  let profileComplete = false;
+  if (user) {
+    try {
+      const { data: profile, error } = await supabase
+        .from('users_profiles')
+        .select('id, full_name, username')
+        .eq('id', user.id)
+        .single();
+
+      if (!error && profile && profile.full_name && profile.username) {
+        profileComplete = true;
+      }
+
+      console.log('📊 Middleware - Profile check:', {
+        hasProfile: !!profile,
+        profileComplete,
+        profileData: profile ? { 
+          hasFullName: !!profile.full_name, 
+          hasUsername: !!profile.username 
+        } : null
+      });
+    } catch (error) {
+      console.log('❌ Middleware - Error fetching profile:', error);
+    }
+  }
 
   if (user &&
     !profileComplete &&
-    !request.nextUrl.pathname.startsWith('/dashboard') &&
-    !request.nextUrl.pathname.startsWith('/api/complete-home')
+    !request.nextUrl.pathname.startsWith('/get-started') &&
+    !request.nextUrl.pathname.startsWith('/api/auth')
   ) {
-    console.log('⚠️ Middleware - Profile incomplete, redirecting to home')
+    console.log('⚠️ Middleware - Profile incomplete, redirecting to Get Started')
     const url = request.nextUrl.clone()
-    url.pathname = '/dashboard'
+    url.pathname = '/get-started'
     return NextResponse.redirect(url)
   }
 
-  console.log('✅ Middleware - User authenticated and profile complete, continuing to:', request.nextUrl.pathname)
+  //console.log('✅ Middleware - User authenticated and profile complete, continuing to:', request.nextUrl.pathname)
   // If user is authenticated and profile is complete, continue with the request
   return supabaseResponse
 }

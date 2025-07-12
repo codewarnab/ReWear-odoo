@@ -24,14 +24,8 @@ export default function AdminLayout({
             <nav className="flex items-center text-sm font-medium max-sm:hidden">
               <a
                 className="text-sidebar-foreground/50 hover:text-sidebar-foreground/70 transition-colors [&[aria-current]]:text-sidebar-foreground before:content-['/'] before:px-4 before:text-sidebar-foreground/30 first:before:hidden"
-                href="/admin"
-                aria-current
-              >
-                Admin
-              </a>
-              <a
-                className="text-sidebar-foreground/50 hover:text-sidebar-foreground/70 transition-colors [&[aria-current]]:text-sidebar-foreground before:content-['/'] before:px-4 before:text-sidebar-foreground/30 first:before:hidden"
                 href="/admin/dashboard"
+                aria-current
               >
                 Dashboard
               </a>
@@ -40,6 +34,12 @@ export default function AdminLayout({
                 href="/admin/moderation"
               >
                 Moderation
+              </a>
+              <a
+                className="text-sidebar-foreground/50 hover:text-sidebar-foreground/70 transition-colors [&[aria-current]]:text-sidebar-foreground before:content-['/'] before:px-4 before:text-sidebar-foreground/30 first:before:hidden"
+                href="/admin/users"
+              >
+                Users
               </a>
             </nav>
             <UserDropdown />
