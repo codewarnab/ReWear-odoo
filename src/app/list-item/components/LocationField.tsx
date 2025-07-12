@@ -29,12 +29,12 @@ export function LocationField({ form }: LocationFieldProps) {
                                 <LocationPicker
                                     apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ""}
                                     value={field.value ? { lat: field.value.lat, lng: field.value.lng } : undefined}
-                                    onValueChange={(latLng) => {
+                                    onValueChange={(latLng, address) => {
                                         if (latLng) {
                                             field.onChange({
                                                 lat: latLng.lat,
                                                 lng: latLng.lng,
-                                                address: `${latLng.lat.toFixed(4)}, ${latLng.lng.toFixed(4)}`
+                                                address: address || `${latLng.lat.toFixed(4)}, ${latLng.lng.toFixed(4)}`
                                             });
                                         } else {
                                             field.onChange(undefined);

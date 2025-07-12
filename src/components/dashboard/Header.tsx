@@ -1,5 +1,6 @@
-    import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import Image from "next/image";
 
 export default function Header() {
   return (
@@ -8,7 +9,13 @@ export default function Header() {
         <div className="flex justify-between items-center h-16">
           <div className="flex items-center">
             <div className="flex-shrink-0 flex items-center">
-              <span className="text-2xl font-bold text-gray-900">👗 ReWear</span>
+              <Image
+                src="/logo.png"
+                alt="ReWear Logo"
+                width={100}
+                height={50}
+                className="object-contain"
+              />
             </div>
           </div>
           <nav className="hidden md:flex space-x-8">
@@ -22,8 +29,11 @@ export default function Header() {
               Community
             </a>
             <Link href="/list-item">
-              <Button variant="outline" size="sm">
-                List an Item
+              <Button
+                className="bg-black hover:bg-gray-800 text-white font-semibold px-6 py-2 rounded-lg shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105"
+                size="default"
+              >
+                + List an Item
               </Button>
             </Link>
           </nav>

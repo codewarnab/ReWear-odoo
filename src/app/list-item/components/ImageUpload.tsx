@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Upload, X, AlertCircle } from "lucide-react";
 import { UseFormReturn } from "react-hook-form";
@@ -16,9 +16,15 @@ interface ImageUploadProps {
 
 export function ImageUpload({ form }: ImageUploadProps) {
     const [imagePreview, setImagePreview] = useState<string[]>([]);
+    const [imageFiles, setImageFiles] = useState<File[]>([]);
     const [dragActive, setDragActive] = useState(false);
 
-    const handleImageUpload = (files: FileList | null) => {
+    // Update form whenever imageFiles changes
+    useEffect(() => {
+        form.setValue('images', imageFiles);
+    }, [imageFiles, form]);
+
+    const handleImageUpload = async (files: FileList | null) => {
         if (!files) return;
 
         const fileArray = Array.from(files);
@@ -38,31 +44,42 @@ export function ImageUpload({ form }: ImageUploadProps) {
             return true;
         });
 
-        if (imagePreview.length + validFiles.length > 5) {
+        if (imageFiles.length + validFiles.length > 5) {
             toast.error("You can upload up to 5 images only", {
                 icon: <AlertCircle className="h-4 w-4" />
             });
             return;
         }
 
-        validFiles.forEach(file => {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                const result = e.target?.result as string;
-                setImagePreview(prev => [...prev, result]);
-
-                // Update form with image URLs (in real app, you'd upload to cloud storage)
-                const currentImages = form.getValues('images') || [];
-                form.setValue('images', [...currentImages, result]);
-            };
-            reader.readAsDataURL(file);
+        // Process valid files
+        const filePromises = validFiles.map(file => {
+            return new Promise<{ preview: string; file: File }>((resolve) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const result = e.target?.result as string;
+                    resolve({ preview: result, file });
+                };
+                reader.readAsDataURL(file);
+            });
         });
+
+        try {
+            const results = await Promise.all(filePromises);
+            const newPreviews = results.map(r => r.preview);
+            const newFiles = results.map(r => r.file);
+
+            setImagePreview(prev => [...prev, ...newPreviews]);
+            setImageFiles(prev => [...prev, ...newFiles]);
+        } catch (error) {
+            toast.error("Error processing images", {
+                icon: <AlertCircle className="h-4 w-4" />
+            });
+        }
     };
 
     const removeImage = (index: number) => {
         setImagePreview(prev => prev.filter((_: string, i: number) => i !== index));
-        const currentImages = form.getValues('images') || [];
-        form.setValue('images', currentImages.filter((_: any, i: number) => i !== index));
+        setImageFiles(prev => prev.filter((_: File, i: number) => i !== index));
     };
 
     const handleDrag = (e: React.DragEvent) => {

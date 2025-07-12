@@ -1,20 +1,14 @@
 import { z } from "zod";
+import { getCategories, getCategoryEmoji as getDbCategoryEmoji } from "@/lib/supabase/categories";
 
-// Define the categories, sizes, and conditions as constants
-export const CATEGORIES = [
-  "Dresses",
-  "Tops",
-  "Bottoms",
-  "Outerwear",
-  "Shoes",
-  "Accessories",
-  "Bags",
-  "Jewelry",
-  "Activewear",
-  "Formal Wear",
-  "Casual Wear",
-  "Vintage",
-  "Other"
+// Fallback categories for schema validation (updated to match database)
+export const DEFAULT_CATEGORIES = [
+  "tops",
+  "bottoms", 
+  "outerwear",
+  "dresses",
+  "footwear", // Updated from "Shoes" to match database
+  "accessories"
 ] as const;
 
 // Category-specific sizing systems
@@ -101,14 +95,22 @@ export const ALL_SIZES = [
   ...NO_SIZE
 ] as const;
 
-// Map categories to their appropriate size arrays
+// Map categories to their appropriate size arrays (updated to match database)
 export const CATEGORY_SIZE_MAP: Record<string, readonly string[]> = {
-  "Dresses": CLOTHING_SIZES,
+  "tops": CLOTHING_SIZES,
+  "bottoms": NUMERIC_SIZES,
+  "outerwear": CLOTHING_SIZES,
+  "dresses": CLOTHING_SIZES,
+  "footwear": SHOE_SIZES,
+  "accessories": ACCESSORY_SIZES,
+  // Legacy mappings for backward compatibility
   "Tops": CLOTHING_SIZES,
   "Bottoms": NUMERIC_SIZES,
   "Outerwear": CLOTHING_SIZES,
-  "Shoes": SHOE_SIZES,
+  "Dresses": CLOTHING_SIZES,
+  "Footwear": SHOE_SIZES,
   "Accessories": ACCESSORY_SIZES,
+  "Shoes": SHOE_SIZES,
   "Bags": NO_SIZE,
   "Jewelry": JEWELRY_SIZES,
   "Activewear": CLOTHING_SIZES,
@@ -126,13 +128,21 @@ export const getSizesForCategory = (category: string): readonly string[] => {
 // Helper function to get size label for a category
 export const getSizeLabelForCategory = (category: string): string => {
   const sizeLabels: Record<string, string> = {
+    "footwear": "Shoe Size",
+    "accessories": "Size",
+    "bottoms": "Size (Numeric)",
+    "tops": "Size",
+    "dresses": "Size",
+    "outerwear": "Size",
+    // Legacy mappings for backward compatibility
+    "Footwear": "Shoe Size",
     "Shoes": "Shoe Size",
     "Jewelry": "Ring Size",
     "Bags": "Size",
     "Accessories": "Size",
     "Bottoms": "Size (Numeric)",
-    "Dresses": "Size",
     "Tops": "Size",
+    "Dresses": "Size",
     "Outerwear": "Size",
     "Activewear": "Size",
     "Formal Wear": "Size",
@@ -153,7 +163,14 @@ export const CONDITIONS = [
   "Poor"
 ] as const;
 
-// Create the validation schema with dynamic size validation
+// Exchange preference options
+export const EXCHANGE_PREFERENCES = [
+  "swap_only",
+  "points_only", 
+  "both"
+] as const;
+
+// Basic schema with fallback categories
 export const listingSchema = z.object({
   title: z
     .string()
@@ -168,9 +185,8 @@ export const listingSchema = z.object({
     .or(z.literal("")),
   
   category: z
-    .enum(CATEGORIES, {
-      message: "Please select a valid category"
-    }),
+    .string()
+    .min(1, "Please select a category"),
   
   size: z
     .string()
@@ -181,15 +197,58 @@ export const listingSchema = z.object({
       message: "Please select a valid condition"
     }),
   
+  brand: z
+    .string()
+    .max(50, "Brand name cannot exceed 50 characters")
+    .optional()
+    .or(z.literal("")),
+  
+  color: z
+    .string()
+    .max(30, "Color cannot exceed 30 characters")
+    .optional()
+    .or(z.literal("")),
+  
+  material: z
+    .string()
+    .max(50, "Material cannot exceed 50 characters")
+    .optional()
+    .or(z.literal("")),
+  
+  tags: z
+    .array(z.string().max(20, "Tag cannot exceed 20 characters"))
+    .max(10, "You can add up to 10 tags")
+    .optional(),
+  
   images: z
-    .array(z.string().url("Invalid image URL"))
+    .array(z.any()) // Accept File objects from the form
     .max(5, "You can upload up to 5 images")
     .optional(),
   
+  pointsValue: z
+    .number()
+    .min(0, "Points value must be positive")
+    .max(10000, "Points value cannot exceed 10,000")
+    .optional(),
+  
+  exchangePreference: z
+    .enum(EXCHANGE_PREFERENCES, {
+      message: "Please select a valid exchange preference"
+    })
+    .optional()
+    .default("both"),
+  
   location: z.object({
     address: z.string().min(1, "Address is required"),
+    city: z.string().optional(),
+    state: z.string().optional(),
+    country: z.string().optional(),
     lat: z.number().min(-90).max(90),
     lng: z.number().min(-180).max(180),
+    coordinates: z.object({
+      lat: z.number(),
+      lng: z.number()
+    }).optional()
   }).optional(),
   
   isAvailable: z.boolean().default(true),
@@ -199,26 +258,76 @@ export const listingSchema = z.object({
     .refine((val) => val === true, {
       message: "You must agree to the terms and conditions"
     })
-}).refine((data) => {
-  // Validate that the size is valid for the selected category
-  const availableSizes = getSizesForCategory(data.category);
-  return availableSizes.includes(data.size);
-}, {
-  message: "Please select a valid size for the selected category",
-  path: ["size"]
 });
+
+// Dynamic schema creation function with database categories
+export async function createListingSchema() {
+  const categories = await getCategories();
+  const categoryNames = categories.map(cat => cat.name);
+  
+  return listingSchema.extend({
+    category: z
+      .enum(categoryNames as [string, ...string[]], {
+        message: "Please select a valid category"
+      })
+  }).refine((data) => {
+    // Validate that the size is valid for the selected category
+    const availableSizes = getSizesForCategory(data.category);
+    return availableSizes.includes(data.size);
+  }, {
+    message: "Please select a valid size for the selected category",
+    path: ["size"]
+  });
+}
+
+// Validation function that works with database categories
+export async function validateListingData(data: any) {
+  const schema = await createListingSchema();
+  return schema.parse(data);
+}
 
 export type ListingFormData = z.infer<typeof listingSchema>;
 
-// Helper function to get category emoji
-export const getCategoryEmoji = (category: string): string => {
-  const categoryEmojiMap: Record<string, string> = {
-    "Dresses": "👗",
-    "Tops": "👕", 
+// Helper function to get category emoji (now uses database)
+export const getCategoryEmoji = async (category: string): Promise<string> => {
+  try {
+    return await getDbCategoryEmoji(category);
+  } catch (error) {
+    console.error('Error fetching category emoji:', error);
+    // Fallback to hardcoded mapping
+    const fallbackEmojiMap: Record<string, string> = {
+      "Tops": "👕",
+      "Bottoms": "👖",
+      "Outerwear": "🧥",
+      "Dresses": "👗",
+      "Footwear": "👟",
+      "Accessories": "👜",
+      // Legacy mappings
+      "Shoes": "👟",
+      "Bags": "🎒",
+      "Jewelry": "💍",
+      "Activewear": "🏃",
+      "Formal Wear": "👔",
+      "Casual Wear": "👕",
+      "Vintage": "🕰️",
+      "Other": "📦"
+    };
+    
+    return fallbackEmojiMap[category] || "📦";
+  }
+};
+
+// Synchronous version for backward compatibility
+export const getCategoryEmojiSync = (category: string): string => {
+  const fallbackEmojiMap: Record<string, string> = {
+    "Tops": "👕",
     "Bottoms": "👖",
     "Outerwear": "🧥",
-    "Shoes": "👟",
+    "Dresses": "👗",
+    "Footwear": "👟",
     "Accessories": "👜",
+    // Legacy mappings
+    "Shoes": "👟",
     "Bags": "🎒",
     "Jewelry": "💍",
     "Activewear": "🏃",
@@ -228,7 +337,7 @@ export const getCategoryEmoji = (category: string): string => {
     "Other": "📦"
   };
   
-  return categoryEmojiMap[category] || "📦";
+  return fallbackEmojiMap[category] || "📦";
 };
 
 // Helper function to get random background color
