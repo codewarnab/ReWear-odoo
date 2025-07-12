@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -12,111 +13,194 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { AlertTriangle, Eye } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { AlertTriangle, Eye, ArrowUpDown } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
+import { Tables } from "@/types/supabase";
 
-// Mock data for reports
-const reports = [
-  {
-    id: 1,
-    itemTitle: "Vintage Denim Jacket",
-    itemImage: "👔",
-    reportedBy: "Sarah Johnson",
-    reporterAvatar: "/placeholder-avatar.jpg",
-    reason: "Inappropriate content",
-    description: "Item contains inappropriate language in description",
-    date: "2023-10-27",
-    status: "pending",
-    severity: "medium",
-  },
-  {
-    id: 2,
-    itemTitle: "Designer Handbag",
-    itemImage: "👜",
-    reportedBy: "Mike Davis",
-    reporterAvatar: "/placeholder-avatar.jpg",
-    reason: "Counterfeit item",
-    description: "This appears to be a fake designer bag being sold as authentic",
-    date: "2023-10-26",
-    status: "pending",
-    severity: "high",
-  },
-  {
-    id: 3,
-    itemTitle: "Running Shoes",
-    itemImage: "👟",
-    reportedBy: "Lisa Chen",
-    reporterAvatar: "/placeholder-avatar.jpg",
-    reason: "Damaged item",
-    description: "Item photos don't show significant damage mentioned in listing",
-    date: "2023-10-25",
-    status: "resolved",
-    severity: "low",
-  },
-  {
-    id: 4,
-    itemTitle: "Winter Coat",
-    itemImage: "🧥",
-    reportedBy: "Tom Wilson",
-    reporterAvatar: "/placeholder-avatar.jpg",
-    reason: "Spam/Duplicate",
-    description: "Same item posted multiple times by the same user",
-    date: "2023-10-24",
-    status: "pending",
-    severity: "medium",
-  },
-  {
-    id: 5,
-    itemTitle: "Summer Dress",
-    itemImage: "👗",
-    reportedBy: "Anna Rodriguez",
-    reporterAvatar: "/placeholder-avatar.jpg",
-    reason: "Inappropriate content",
-    description: "Images are not appropriate for the platform",
-    date: "2023-10-23",
-    status: "dismissed",
-    severity: "low",
-  },
-];
+type ReportedItemWithDetails = Tables<'reported_items'> & {
+  clothing_items: Tables<'clothing_items'> & {
+    users_profiles: Tables<'users_profiles'> | null;
+  } | null;
+  reporter: Tables<'users_profiles'> | null;
+};
 
 export default function ReportsPage() {
-  const handleDismiss = (reportId: number) => {
-    console.log(`Dismissed report ${reportId}`);
-    // Add actual dismiss logic here
+  const [reports, setReports] = useState<ReportedItemWithDetails[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [sortBy, setSortBy] = useState<'all' | 'pending' | 'reviewed' | 'resolved'>('all');
+  const [stats, setStats] = useState({
+    total: 0,
+    pending: 0,
+    reviewed: 0,
+    resolved: 0
+  });
+
+  const supabase = createClient();
+
+  useEffect(() => {
+    fetchReports();
+    fetchStats();
+  }, []);
+
+  const fetchReports = async () => {
+    try {
+      setLoading(true);
+      
+      let query = supabase
+        .from('reported_items')
+        .select(`
+          *,
+          clothing_items:item_id (
+            *,
+            users_profiles:owner_id (*)
+          ),
+          reporter:reporter_id (*)
+        `)
+        .order('created_at', { ascending: false });
+
+      // Apply status filter
+      if (sortBy !== 'all') {
+        query = query.eq('status', sortBy);
+      }
+
+      const { data, error } = await query;
+
+      if (error) {
+        console.error('Error fetching reports:', error);
+        return;
+      }
+
+      setReports(data || []);
+    } catch (error) {
+      console.error('Error:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleRemoveItem = (reportId: number) => {
-    console.log(`Removed item from report ${reportId}`);
-    // Add actual removal logic here
+  const fetchStats = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('reported_items')
+        .select('status');
+
+      if (error) {
+        console.error('Error fetching stats:', error);
+        return;
+      }
+
+      const stats = data?.reduce((acc, item) => {
+        acc.total += 1;
+        if (item.status === 'pending') acc.pending += 1;
+        else if (item.status === 'reviewed') acc.reviewed += 1;
+        else if (item.status === 'resolved') acc.resolved += 1;
+        return acc;
+      }, { total: 0, pending: 0, reviewed: 0, resolved: 0 }) || { total: 0, pending: 0, reviewed: 0, resolved: 0 };
+
+      setStats(stats);
+    } catch (error) {
+      console.error('Error:', error);
+    }
   };
 
-  const handleViewDetails = (reportId: number) => {
+  useEffect(() => {
+    fetchReports();
+  }, [sortBy]);
+
+  const handleDismiss = async (reportId: string) => {
+    try {
+      const { error } = await supabase
+        .from('reported_items')
+        .update({ 
+          status: 'resolved',
+          resolution: 'Dismissed - No action needed',
+          reviewed_at: new Date().toISOString()
+        })
+        .eq('id', reportId);
+
+      if (error) {
+        console.error('Error dismissing report:', error);
+        return;
+      }
+
+      await fetchReports();
+      await fetchStats();
+    } catch (error) {
+      console.error('Error:', error);
+    }
+  };
+
+  const handleRemoveItem = async (reportId: string, itemId: string) => {
+    try {
+      // Update the clothing item status to mark it as removed
+      const { error: itemError } = await supabase
+        .from('clothing_items')
+        .update({ 
+          status: 'removed',
+          approval_status: 'rejected'
+        })
+        .eq('id', itemId);
+
+      if (itemError) {
+        console.error('Error removing item:', itemError);
+        return;
+      }
+
+      // Update the report status
+      const { error: reportError } = await supabase
+        .from('reported_items')
+        .update({ 
+          status: 'resolved',
+          resolution: 'Item removed from platform',
+          reviewed_at: new Date().toISOString()
+        })
+        .eq('id', reportId);
+
+      if (reportError) {
+        console.error('Error updating report:', reportError);
+        return;
+      }
+
+      await fetchReports();
+      await fetchStats();
+    } catch (error) {
+      console.error('Error:', error);
+    }
+  };
+
+  const handleViewDetails = (reportId: string) => {
     console.log(`View details for report ${reportId}`);
     // Add navigation to detailed view
   };
 
-  const getSeverityColor = (severity: string) => {
-    switch (severity) {
-      case "high":
-        return "text-red-600 bg-red-50";
-      case "medium":
-        return "text-orange-600 bg-orange-50";
-      case "low":
-        return "text-yellow-600 bg-yellow-50";
-      default:
-        return "text-gray-600 bg-gray-50";
-    }
-  };
-
-  const getStatusColor = (status: string) => {
+  const getStatusColor = (status: string | null) => {
     switch (status) {
       case "pending":
         return "destructive";
       case "resolved":
         return "default";
-      case "dismissed":
+      case "reviewed":
         return "secondary";
       default:
         return "outline";
+    }
+  };
+
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return 'N/A';
+    return new Date(dateString).toLocaleDateString();
+  };
+
+  const getItemImage = (item: Tables<'clothing_items'> | null) => {
+    if (!item || !item.images) return "📦";
+    
+    // Try to get the first image from the images array/JSON
+    try {
+      const images = Array.isArray(item.images) ? item.images : JSON.parse(item.images as string);
+      return images.length > 0 ? "🎽" : "📦"; // Default clothing icon
+    } catch {
+      return "📦";
     }
   };
 
@@ -136,7 +220,7 @@ export default function ReportsPage() {
             <CardTitle className="text-sm font-medium">Total Reports</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">47</div>
+            <div className="text-2xl font-bold">{stats.total}</div>
             <p className="text-xs text-muted-foreground">All time</p>
           </CardContent>
         </Card>
@@ -145,8 +229,17 @@ export default function ReportsPage() {
             <CardTitle className="text-sm font-medium">Pending</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-600">12</div>
+            <div className="text-2xl font-bold text-red-600">{stats.pending}</div>
             <p className="text-xs text-muted-foreground">Need attention</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">Reviewed</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-blue-600">{stats.reviewed}</div>
+            <p className="text-xs text-muted-foreground">Under review</p>
           </CardContent>
         </Card>
         <Card>
@@ -154,17 +247,8 @@ export default function ReportsPage() {
             <CardTitle className="text-sm font-medium">Resolved</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">28</div>
+            <div className="text-2xl font-bold text-green-600">{stats.resolved}</div>
             <p className="text-xs text-muted-foreground">Actions taken</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Dismissed</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-gray-600">7</div>
-            <p className="text-xs text-muted-foreground">No action needed</p>
           </CardContent>
         </Card>
       </div>
@@ -172,100 +256,132 @@ export default function ReportsPage() {
       {/* Reports Table */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <AlertTriangle className="w-5 h-5 text-red-600" />
-            User Reports
-          </CardTitle>
-          <CardDescription>Items reported by users for review</CardDescription>
+          <div className="flex justify-between items-start">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <AlertTriangle className="w-5 h-5 text-red-600" />
+                User Reports
+              </CardTitle>
+              <CardDescription>Items reported by users for review</CardDescription>
+            </div>
+            <div className="flex items-center gap-2">
+              <ArrowUpDown className="w-4 h-4" />
+              <Select value={sortBy} onValueChange={(value) => setSortBy(value as 'all' | 'pending' | 'reviewed' | 'resolved')}>
+                <SelectTrigger className="w-40">
+                  <SelectValue placeholder="Filter by status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Reports</SelectItem>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="reviewed">Reviewed</SelectItem>
+                  <SelectItem value="resolved">Resolved</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Reported Item</TableHead>
-                  <TableHead>Reported By</TableHead>
-                  <TableHead>Reason</TableHead>
-                  <TableHead>Severity</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {reports.map((report) => (
-                  <TableRow key={report.id}>
-                    <TableCell>
-                      <div className="flex items-center space-x-3">
-                        <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center text-lg">
-                          {report.itemImage}
-                        </div>
-                        <div>
-                          <p className="font-medium">{report.itemTitle}</p>
-                          <p className="text-sm text-gray-500 max-w-xs truncate">
-                            {report.description}
-                          </p>
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center space-x-2">
-                        <Avatar className="w-8 h-8">
-                          <AvatarImage src={report.reporterAvatar} />
-                          <AvatarFallback>{report.reportedBy.charAt(0)}</AvatarFallback>
-                        </Avatar>
-                        <span className="text-sm">{report.reportedBy}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{report.reason}</Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge className={getSeverityColor(report.severity)}>
-                        {report.severity}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={getStatusColor(report.status)}>
-                        {report.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>{report.date}</TableCell>
-                    <TableCell>
-                      <div className="flex gap-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleViewDetails(report.id)}
-                        >
-                          <Eye className="w-4 h-4 mr-1" />
-                          View
-                        </Button>
-                        {report.status === "pending" && (
-                          <>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleDismiss(report.id)}
-                            >
-                              Dismiss
-                            </Button>
-                            <Button
-                              size="sm"
-                              className="bg-red-600 hover:bg-red-700 text-white"
-                              onClick={() => handleRemoveItem(report.id)}
-                            >
-                              Remove
-                            </Button>
-                          </>
-                        )}
-                      </div>
-                    </TableCell>
+          {loading ? (
+            <div className="flex items-center justify-center p-8">
+              <div className="text-muted-foreground">Loading reports...</div>
+            </div>
+          ) : reports.length === 0 ? (
+            <div className="flex items-center justify-center p-8">
+              <div className="text-muted-foreground">No reports found</div>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Reported Item</TableHead>
+                    <TableHead>Reported By</TableHead>
+                    <TableHead>Reason</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Actions</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+                </TableHeader>
+                <TableBody>
+                  {reports.map((report) => (
+                    <TableRow key={report.id}>
+                      <TableCell>
+                        <div className="flex items-center space-x-3">
+                          <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center text-lg">
+                            {getItemImage(report.clothing_items)}
+                          </div>
+                          <div>
+                            <p className="font-medium">
+                              {report.clothing_items?.title || 'Unknown Item'}
+                            </p>
+                            <p className="text-sm text-gray-500 max-w-xs truncate">
+                              {report.description || 'No description provided'}
+                            </p>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center space-x-2">
+                          <Avatar className="w-8 h-8">
+                            <AvatarImage src={report.reporter?.avatar_url || undefined} />
+                            <AvatarFallback>
+                              {report.reporter?.full_name?.charAt(0) || 
+                               report.reporter?.username?.charAt(0) || 'U'}
+                            </AvatarFallback>
+                          </Avatar>
+                          <span className="text-sm">
+                            {report.reporter?.full_name || 
+                             report.reporter?.username || 'Unknown User'}
+                          </span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline">{report.reason}</Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={getStatusColor(report.status)}>
+                          {report.status || 'pending'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>{formatDate(report.created_at)}</TableCell>
+                      <TableCell>
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleViewDetails(report.id)}
+                          >
+                            <Eye className="w-4 h-4 mr-1" />
+                            View
+                          </Button>
+                          {report.status === "pending" && (
+                            <>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleDismiss(report.id)}
+                              >
+                                Dismiss
+                              </Button>
+                              {report.clothing_items && (
+                                <Button
+                                  size="sm"
+                                  className="bg-red-600 hover:bg-red-700 text-white"
+                                  onClick={() => handleRemoveItem(report.id, report.clothing_items!.id)}
+                                >
+                                  Remove
+                                </Button>
+                              )}
+                            </>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
