@@ -98,6 +98,12 @@ export default function UserDropdown() {
     );
   }
 
+  // Generate avatar URL using username
+  const getAvatarUrl = (username: string | null) => {
+    if (!username) return "";
+    return `https://avatar.iran.liara.run/public?username=${encodeURIComponent(username)}`;
+  };
+
   // Get initials for avatar fallback
   const getInitials = (name: string | null) => {
     if (!name) return "U";
@@ -115,7 +121,7 @@ export default function UserDropdown() {
         <Button variant="ghost" className="h-auto p-0 hover:bg-transparent">
           <Avatar className="size-8">
             <AvatarImage
-              src={userProfile.avatar_url || ""}
+              src={getAvatarUrl(userProfile.username)}
               width={32}
               height={32}
               alt="Profile image"
@@ -160,28 +166,6 @@ export default function UserDropdown() {
             aria-hidden="true"
           />
           <span>Profile</span>
-        </DropdownMenuItem>
-        <DropdownMenuItem 
-          className="gap-3 px-1 cursor-pointer"
-          onClick={() => handleNavigation("/changelog")}
-        >
-          <RiPulseLine
-            size={20}
-            className="text-muted-foreground/70"
-            aria-hidden="true"
-          />
-          <span>Changelog</span>
-        </DropdownMenuItem>
-        <DropdownMenuItem 
-          className="gap-3 px-1 cursor-pointer"
-          onClick={() => handleNavigation("/history")}
-        >
-          <RiFindReplaceLine
-            size={20}
-            className="text-muted-foreground/70"
-            aria-hidden="true"
-          />
-          <span>History</span>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem 
