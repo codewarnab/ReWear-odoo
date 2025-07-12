@@ -37,6 +37,14 @@ export async function updateSession(request: NextRequest) {
     pathname: request.nextUrl.pathname
   })
 
+  // If user is authenticated and trying to access login page, redirect to dashboard
+  if (user && request.nextUrl.pathname.startsWith('/login')) {
+    console.log('🔄 Middleware - Authenticated user trying to access login, redirecting to dashboard')
+    const url = request.nextUrl.clone()
+    url.pathname = '/dashboard'
+    return NextResponse.redirect(url)
+  }
+
   if (
     !user &&
     !request.nextUrl.pathname.startsWith('/login') &&

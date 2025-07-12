@@ -193,14 +193,14 @@ export default function ReportsPage() {
   };
 
   const getItemImage = (item: Tables<'clothing_items'> | null) => {
-    if (!item || !item.images) return "📦";
+    if (!item || !item.images) return null;
     
     // Try to get the first image from the images array/JSON
     try {
       const images = Array.isArray(item.images) ? item.images : JSON.parse(item.images as string);
-      return images.length > 0 ? "🎽" : "📦"; // Default clothing icon
+      return images.length > 0 ? images[0] : null; // Return first image URL or null
     } catch {
-      return "📦";
+      return null;
     }
   };
 
@@ -290,97 +290,107 @@ export default function ReportsPage() {
               <div className="text-muted-foreground">No reports found</div>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Reported Item</TableHead>
-                    <TableHead>Reported By</TableHead>
-                    <TableHead>Reason</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {reports.map((report) => (
-                    <TableRow key={report.id}>
-                      <TableCell>
-                        <div className="flex items-center space-x-3">
-                          <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center text-lg">
-                            {getItemImage(report.clothing_items)}
-                          </div>
-                          <div>
-                            <p className="font-medium">
-                              {report.clothing_items?.title || 'Unknown Item'}
-                            </p>
-                            <p className="text-sm text-gray-500 max-w-xs truncate">
-                              {report.description || 'No description provided'}
-                            </p>
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center space-x-2">
-                          <Avatar className="w-8 h-8">
-                            <AvatarImage src={report.reporter?.avatar_url || undefined} />
-                            <AvatarFallback>
-                              {report.reporter?.full_name?.charAt(0) || 
-                               report.reporter?.username?.charAt(0) || 'U'}
-                            </AvatarFallback>
-                          </Avatar>
-                          <span className="text-sm">
-                            {report.reporter?.full_name || 
-                             report.reporter?.username || 'Unknown User'}
-                          </span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline">{report.reason}</Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={getStatusColor(report.status)}>
-                          {report.status || 'pending'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>{formatDate(report.created_at)}</TableCell>
-                      <TableCell>
-                        <div className="flex gap-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleViewDetails(report.id)}
-                          >
-                            <Eye className="w-4 h-4 mr-1" />
-                            View
-                          </Button>
-                          {report.status === "pending" && (
-                            <>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => handleDismiss(report.id)}
-                              >
-                                Dismiss
-                              </Button>
-                              {report.clothing_items && (
-                                <Button
-                                  size="sm"
-                                  className="bg-red-600 hover:bg-red-700 text-white"
-                                  onClick={() => handleRemoveItem(report.id, report.clothing_items!.id)}
-                                >
-                                  Remove
-                                </Button>
-                              )}
-                            </>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[30%]">Reported Item</TableHead>
+                  <TableHead className="w-[15%]">Reported By</TableHead>
+                  <TableHead className="w-[12%]">Reason</TableHead>
+                  <TableHead className="w-[8%]">Status</TableHead>
+                  <TableHead className="w-[10%]">Date</TableHead>
+                  <TableHead className="w-[25%]">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {reports.map((report) => (
+                  <TableRow key={report.id}>
+                    <TableCell className="w-[30%]">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center overflow-hidden flex-shrink-0">
+                          {getItemImage(report.clothing_items) ? (
+                            <img 
+                              src={getItemImage(report.clothing_items)} 
+                              alt={report.clothing_items?.title || 'Item image'}
+                              className="w-full h-full object-cover rounded-lg"
+                            />
+                          ) : (
+                            <span className="text-lg">📦</span>
                           )}
                         </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="font-medium line-clamp-2 break-words">
+                            {report.clothing_items?.title || 'Unknown Item'}
+                          </p>
+                          <p className="text-sm text-gray-500 line-clamp-3 break-words">
+                            {report.description || 'No description provided'}
+                          </p>
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell className="w-[15%]">
+                      <div className="flex items-center space-x-2">
+                        <Avatar className="w-8 h-8 flex-shrink-0">
+                          <AvatarImage src={report.reporter?.avatar_url || undefined} />
+                          <AvatarFallback>
+                            {report.reporter?.full_name?.charAt(0) || 
+                             report.reporter?.username?.charAt(0) || 'U'}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span className="text-sm truncate">
+                          {report.reporter?.full_name || 
+                           report.reporter?.username || 'Unknown User'}
+                        </span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="w-[12%]">
+                      <Badge variant="outline" className="truncate">
+                        {report.reason}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="w-[8%]">
+                      <Badge variant={getStatusColor(report.status)}>
+                        {report.status || 'pending'}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="w-[10%]">{formatDate(report.created_at)}</TableCell>
+                    <TableCell className="w-[25%]">
+                      <div className="flex gap-2 flex-wrap">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleViewDetails(report.id)}
+                          className="flex-shrink-0"
+                        >
+                          <Eye className="w-4 h-4 mr-1" />
+                          View
+                        </Button>
+                        {report.status === "pending" && (
+                          <>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleDismiss(report.id)}
+                              className="flex-shrink-0"
+                            >
+                              Dismiss
+                            </Button>
+                            {report.clothing_items && (
+                              <Button
+                                size="sm"
+                                className="bg-red-600 hover:bg-red-700 text-white flex-shrink-0"
+                                onClick={() => handleRemoveItem(report.id, report.clothing_items!.id)}
+                              >
+                                Remove
+                              </Button>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           )}
         </CardContent>
       </Card>

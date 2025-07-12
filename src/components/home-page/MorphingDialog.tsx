@@ -93,11 +93,14 @@ export function MorphingDialogContent({
 
   return (
     <motion.div
-      className={className}
+      className={`bg-white rounded-lg ${className}`}
       style={style}
       layoutId={`dialog-${context.id}`}
       transition={context.transition}
       onClick={(e) => e.stopPropagation()}
+      initial={{ scale: 0.8 }}
+      animate={{ scale: 1 }}
+      exit={{ scale: 0.8 }}
     >
       {children}
     </motion.div>

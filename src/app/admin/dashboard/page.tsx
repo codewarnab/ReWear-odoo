@@ -175,14 +175,14 @@ export default function ModerationPage() {
   };
 
   const getItemImage = (item: Tables<'clothing_items'>) => {
-    if (!item.images) return "📦";
+    if (!item.images) return null;
     
     // Try to get the first image from the images array/JSON
     try {
       const images = Array.isArray(item.images) ? item.images : JSON.parse(item.images as string);
-      return images.length > 0 ? "🎽" : "📦"; // Default clothing icon
+      return images.length > 0 ? images[0] : null; // Return first image URL or null
     } catch {
-      return "📦";
+      return null;
     }
   };
 
@@ -271,8 +271,16 @@ export default function ModerationPage() {
                     <TableRow key={item.id}>
                       <TableCell>
                         <div className="flex items-center space-x-3">
-                          <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center text-2xl">
-                            {getItemImage(item)}
+                          <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center overflow-hidden">
+                            {getItemImage(item) ? (
+                              <img 
+                                src={getItemImage(item)} 
+                                alt={item.title}
+                                className="w-full h-full object-cover rounded-lg"
+                              />
+                            ) : (
+                              <span className="text-2xl">📦</span>
+                            )}
                           </div>
                           <div>
                             <p className="font-medium">{item.title}</p>

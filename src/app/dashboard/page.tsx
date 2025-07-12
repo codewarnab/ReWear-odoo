@@ -14,7 +14,11 @@ import { createClient } from "@/lib/supabase/client";
 import { Tables } from "@/types/supabase";
 import { 
   mockUploadedItems, 
-  mockTransactions 
+  mockTransactions,
+  mockUserProfile,
+  UserProfile,
+  UploadedItem,
+  Transaction
 } from "@/lib/data/dashboard";
 import Link from "next/link";
 import { ShoppingCart, Heart } from "lucide-react";
@@ -320,8 +324,8 @@ export default function DashboardPage() {
       
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-8">My Profile</h1>
-        {/* The ProfileSection component displays user profile information 
-       <ProfileSection userProfile={userProfile} />*/}
+
+               <ProfileSection />
         
 
         

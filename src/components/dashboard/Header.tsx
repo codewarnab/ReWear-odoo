@@ -9,25 +9,24 @@ export default function Header() {
         <div className="flex justify-between items-center h-16">
           <div className="flex items-center">
             <div className="flex-shrink-0 flex items-center">
-              <Image
-                src="/logo.png"
-                alt="ReWear Logo"
-                width={100}
-                height={50}
-                className="object-contain"
-              />
+              <Link href="/">
+                <Image
+                  src="/logo.png"
+                  alt="ReWear Logo"
+                  width={100}
+                  height={50}
+                  className="object-contain cursor-pointer"
+                />
+              </Link>
             </div>
           </div>
           <nav className="hidden md:flex space-x-8">
-            <a href="#" className="text-gray-500 hover:text-gray-700 px-3 py-2 text-sm font-medium">
+            <Link href="/#explore" className="text-gray-500 hover:text-gray-700 px-3 py-2 text-sm font-medium">
               Explore
-            </a>
-            <a href="#" className="text-gray-500 hover:text-gray-700 px-3 py-2 text-sm font-medium">
+            </Link>
+            <Link href="/#how-it-works" className="text-gray-500 hover:text-gray-700 px-3 py-2 text-sm font-medium">
               How it Works
-            </a>
-            <a href="#" className="text-gray-500 hover:text-gray-700 px-3 py-2 text-sm font-medium">
-              Community
-            </a>
+            </Link>
             <Link href="/list-item">
               <Button
                 className="bg-black hover:bg-gray-800 text-white font-semibold px-6 py-2 rounded-lg shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105"

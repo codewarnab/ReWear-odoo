@@ -12,21 +12,20 @@ export default function ListItemPage() {
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center">
               <div className="flex-shrink-0 flex items-center">
-                <span className="text-2xl font-bold text-gray-900">👗 ReWear</span>
+                <Link href="/">
+                  <span className="text-2xl font-bold text-gray-900 cursor-pointer">👗 ReWear</span>
+                </Link>
               </div>
             </div>
             <nav className="hidden md:flex space-x-8">
               <Link href="/dashboard" className="text-gray-500 hover:text-gray-700 px-3 py-2 text-sm font-medium">
                 Dashboard
               </Link>
-              <Link href="#" className="text-gray-500 hover:text-gray-700 px-3 py-2 text-sm font-medium">
+              <Link href="/#explore" className="text-gray-500 hover:text-gray-700 px-3 py-2 text-sm font-medium">
                 Explore
               </Link>
-              <Link href="#" className="text-gray-500 hover:text-gray-700 px-3 py-2 text-sm font-medium">
+              <Link href="/#how-it-works" className="text-gray-500 hover:text-gray-700 px-3 py-2 text-sm font-medium">
                 How it Works
-              </Link>
-              <Link href="#" className="text-gray-500 hover:text-gray-700 px-3 py-2 text-sm font-medium">
-                Community
               </Link>
             </nav>
             <div className="flex items-center">
