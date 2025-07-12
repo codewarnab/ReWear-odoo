@@ -3,7 +3,6 @@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import SwipeableTabs from "@/components/ui/swipable-tabs";
 import { Transaction } from "@/lib/data/dashboard";
 import { Grid3x3Icon, TableIcon } from "lucide-react";
 import { useState } from "react";
@@ -34,6 +33,7 @@ const getStatusVariant = (status: string): "success" | "warning" | "info" | "pur
 
 export default function TransactionsSection({ transactions }: TransactionsSectionProps) {
   const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
+  const [activeTab, setActiveTab] = useState('ongoing');
   const ongoingTransactions = transactions.filter(t => t.type === 'ongoing');
   const completedTransactions = transactions.filter(t => t.type === 'completed');
 
@@ -145,28 +145,38 @@ export default function TransactionsSection({ transactions }: TransactionsSectio
 
   const tabs = [
     {
+      id: "ongoing",
       label: "Ongoing",
-      content: (
-        <AnimatePresence mode="wait">
-          {viewMode === 'table' 
-            ? renderTableContent(ongoingTransactions, "No ongoing transactions yet.")
-            : renderCardContent(ongoingTransactions, "No ongoing transactions yet.")
-          }
-        </AnimatePresence>
-      )
     },
     {
+      id: "completed",
       label: "Completed",
-      content: (
-        <AnimatePresence mode="wait">
-          {viewMode === 'table'
-            ? renderTableContent(completedTransactions, "No completed transactions yet.")
-            : renderCardContent(completedTransactions, "No completed transactions yet.")
-          }
-        </AnimatePresence>
-      )
     }
   ];
+
+  const renderContent = () => {
+    const transactionList = activeTab === 'ongoing' ? ongoingTransactions : completedTransactions;
+    const emptyMessage = activeTab === 'ongoing' 
+      ? "No ongoing transactions yet." 
+      : "No completed transactions yet.";
+
+    return (
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={activeTab}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -20 }}
+          transition={{ duration: 0.3 }}
+        >
+          {viewMode === 'table' 
+            ? renderTableContent(transactionList, emptyMessage)
+            : renderCardContent(transactionList, emptyMessage)
+          }
+        </motion.div>
+      </AnimatePresence>
+    )
+  }
 
   return (
     <Card>
@@ -198,7 +208,24 @@ export default function TransactionsSection({ transactions }: TransactionsSectio
         </div>
       </CardHeader>
       <CardContent>
-        <SwipeableTabs tabs={tabs} />
+        <div className="flex items-center gap-2 mb-6">
+          {tabs.map(tab => (
+            <motion.button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`relative px-4 py-2 rounded-md font-medium transition-all duration-200 cursor-pointer ${
+                activeTab === tab.id
+                  ? "bg-blue-500 text-white shadow-lg shadow-blue-500/25"
+                  : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800 hover:shadow-md"
+              }`}
+              whileHover={{ scale: 1.02, y: -1 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              {tab.label}
+            </motion.button>
+          ))}
+        </div>
+        {renderContent()}
       </CardContent>
     </Card>
   );

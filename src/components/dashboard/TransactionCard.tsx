@@ -98,7 +98,10 @@ export default function TransactionCard({ transaction, imageUrl }: TransactionCa
       <div className="relative">
         {displayImages.length > 0 ? (
           useCarousel ? (
-            <div className="h-88 w-full rounded-md overflow-hidden">
+            <div
+              className="h-88 w-full rounded-md overflow-hidden"
+              onPointerDown={(e) => e.stopPropagation()}
+            >
               <Carousel options={OPTIONS} className="h-full">
                 <SliderContainer className="h-full">
                   {displayImages.map((image, index) => (
